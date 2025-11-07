@@ -10,8 +10,6 @@ body {
     min-height: 100vh;
     padding: 20px;
     color: #333;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
 .container {
@@ -44,21 +42,6 @@ main {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-@media (max-width: 768px) {
-    .expense-form-section,
-    .expenses-section {
-        padding: 20px;
-    }
-}
-
-@media (max-width: 480px) {
-    .expense-form-section,
-    .expenses-section {
-        padding: 15px;
-        border-radius: 8px;
-    }
-}
-
 .expense-form-section h2,
 .expenses-section h2 {
     color: #667eea;
@@ -86,13 +69,6 @@ main {
     transition: border-color 0.3s;
 }
 
-@media (max-width: 480px) {
-    .form-group input {
-        padding: 14px;
-        font-size: 16px; /* Prevents zoom on iOS */
-    }
-}
-
 .form-group input:focus {
     outline: none;
     border-color: #667eea;
@@ -109,16 +85,6 @@ main {
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-}
-
-@media (max-width: 480px) {
-    .btn-primary {
-        padding: 16px;
-        font-size: 1rem;
-        min-height: 48px; /* Better touch target */
-    }
 }
 
 .btn-primary:hover {
@@ -177,15 +143,6 @@ main {
     justify-content: space-between;
     align-items: center;
     transition: transform 0.2s, box-shadow 0.2s;
-    gap: 15px;
-}
-
-@media (max-width: 480px) {
-    .expense-item {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 12px;
-    }
 }
 
 .expense-item:hover {
@@ -215,14 +172,6 @@ main {
     gap: 15px;
     font-size: 0.85rem;
     color: #666;
-    flex-wrap: wrap;
-}
-
-@media (max-width: 480px) {
-    .expense-meta {
-        gap: 10px;
-        font-size: 0.8rem;
-    }
 }
 
 .expense-meta span {
@@ -240,19 +189,6 @@ main {
     cursor: pointer;
     font-size: 0.9rem;
     transition: background 0.2s;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    min-height: 40px;
-    white-space: nowrap;
-}
-
-@media (max-width: 480px) {
-    .btn-delete {
-        width: 100%;
-        padding: 12px;
-        font-size: 0.95rem;
-        min-height: 44px; /* Better touch target */
-    }
 }
 
 .btn-delete:hover {
@@ -260,17 +196,8 @@ main {
 }
 
 @media (max-width: 768px) {
-    body {
-        padding: 15px;
-    }
-
     main {
         grid-template-columns: 1fr;
-        gap: 15px;
-    }
-
-    header {
-        margin-bottom: 20px;
     }
 
     header h1 {
@@ -280,66 +207,4 @@ main {
     .total-amount {
         font-size: 2rem;
     }
-
-    .expenses-list {
-        max-height: 400px;
-    }
 }
-
-@media (max-width: 480px) {
-    body {
-        padding: 10px;
-    }
-
-    header h1 {
-        font-size: 1.75rem;
-        line-height: 1.2;
-    }
-
-    .expense-form-section h2,
-    .expenses-section h2 {
-        font-size: 1.25rem;
-        margin-bottom: 15px;
-    }
-
-    .total-display {
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-
-    .total-display h2 {
-        font-size: 1rem;
-    }
-
-    .total-amount {
-        font-size: 1.75rem;
-    }
-
-    .expense-amount {
-        font-size: 1.2rem;
-    }
-
-    .expense-description {
-        font-size: 0.95rem;
-    }
-
-    .expenses-list {
-        max-height: 350px;
-    }
-
-    .empty-message {
-        padding: 30px 15px;
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 360px) {
-    header h1 {
-        font-size: 1.5rem;
-    }
-
-    .total-amount {
-        font-size: 1.5rem;
-    }
-}
-
