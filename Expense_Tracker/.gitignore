@@ -1,7 +1,6 @@
 # OS files
 .DS_Store
 Thumbs.db
-desktop.ini
 
 # Editor files
 .vscode/
@@ -12,9 +11,9 @@ desktop.ini
 
 # Logs
 *.log
+npm-debug.log*
 
-# Temporary files
-*.tmp
-*.temp
-
+# Environment variables
+.env
+.env.local
 
