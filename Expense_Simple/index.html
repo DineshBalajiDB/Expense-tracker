@@ -378,6 +378,138 @@
             transform: translateY(0);
         }
 
+        .btn-reset {
+            padding: 10px 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-reset:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-reset:active {
+            transform: translateY(0);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .modal-content p {
+            margin-bottom: 25px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .modal-content .warning {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            color: #991b1b;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            padding: 10px 20px;
+            background: #e5e7eb;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background: #d1d5db;
+        }
+
+        .btn-confirm-reset {
+            padding: 10px 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-confirm-reset:hover {
+            background: #dc2626;
+        }
+
         .transactions-list {
             max-height: 500px;
             overflow-y: auto;
@@ -524,13 +656,28 @@
                 width: 100%;
             }
 
-            .btn-download {
+            .btn-download,
+            .btn-reset {
                 width: 100%;
                 margin-top: 10px;
             }
 
             .charts-container {
                 grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+            }
+
+            .btn-cancel,
+            .btn-confirm-reset {
+                width: 100%;
             }
 
             .chart-wrapper {
@@ -656,9 +803,31 @@
                     <option value="all">All Categories</option>
                 </select>
                 <button class="btn-download" onclick="generatePDF()">📄 Download PDF</button>
+                <button class="btn-reset" onclick="showResetModal()">🔄 Reset All Data</button>
             </div>
             <div class="transactions-list" id="transactionsList">
                 <p class="empty-state">No transactions yet. Add your first transaction above!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div id="resetModal" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ Reset All Data</h3>
+            <div class="warning">
+                <strong>Warning:</strong> This action cannot be undone!
+            </div>
+            <p>This will permanently delete:</p>
+            <ul style="margin-left: 20px; margin-bottom: 20px; color: #666;">
+                <li>All transactions</li>
+                <li>All savings goals</li>
+                <li>All financial data</li>
+            </ul>
+            <p style="color: #991b1b; font-weight: 600;">Are you sure you want to reset all data?</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeResetModal()">Cancel</button>
+                <button class="btn-confirm-reset" onclick="resetAllData()">Yes, Reset All Data</button>
             </div>
         </div>
     </div>
@@ -1163,6 +1332,78 @@
                 displayGoals();
             }
         }
+
+        // Show reset modal
+        function showResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.add('show');
+        }
+
+        // Close reset modal
+        function closeResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.remove('show');
+        }
+
+        // Reset all data
+        function resetAllData() {
+            // Clear transactions from localStorage
+            localStorage.removeItem('transactions');
+            
+            // Clear goals from localStorage
+            localStorage.removeItem('goals');
+            
+            // Reset arrays
+            transactions = [];
+            goals = [];
+            
+            // Reset editing goal ID
+            editingGoalId = null;
+            
+            // Reset form fields
+            document.getElementById('transactionForm').reset();
+            document.getElementById('goalForm').reset();
+            document.getElementById('date').valueAsDate = new Date();
+            
+            // Reset goal form button text
+            const goalFormButton = document.querySelector('#goalForm button[type="submit"]');
+            if (goalFormButton) {
+                goalFormButton.textContent = 'Add Goal';
+            }
+            
+            // Update category dropdown
+            updateCategoryDropdown();
+            updateFilterCategory();
+            
+            // Reset calculations and UI
+            calculateTotals();
+            displayTransactions();
+            displayGoals();
+            
+            // Close modal
+            closeResetModal();
+            
+            // Show success message
+            alert('All data has been reset successfully!');
+        }
+
+        // Close modal when clicking outside or pressing Escape
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('resetModal');
+            if (event.target === modal) {
+                closeResetModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('resetModal');
+                if (modal.classList.contains('show')) {
+                    closeResetModal();
+                }
+            }
+        });
 
         // Display transactions
         function displayTransactions() {
