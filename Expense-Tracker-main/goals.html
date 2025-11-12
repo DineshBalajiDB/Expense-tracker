@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Goals</title>
+  <style>
+    body {
+      margin:0; font-family:'Inter', sans-serif; background:#f8f9fb; color:#333;
+    }
+    .sidebar {
+      width:200px; background:#fff; height:100vh; position:fixed; top:0; left:0; 
+      box-shadow:2px 0 6px rgba(0,0,0,0.05); padding:2rem 1rem; 
+      display:flex; flex-direction:column; gap:1.5rem;
+    }
+    .sidebar h2 { font-size:1.2rem; color:#555; margin:0; }
+    .sidebar a {
+      text-decoration:none; color:#555; font-weight:500; 
+      padding:.6rem 1rem; border-radius:8px; transition:all .2s;
+    }
+    .sidebar a.active, .sidebar a:hover { background:#6a85f1; color:#fff; }
+    .main { margin-left:220px; padding:1.5rem; }
+    .card {
+      background:#fff; padding:1.5rem; border-radius:16px; 
+      box-shadow:0 4px 16px rgba(0,0,0,.05);
+      width:100%; max-width:700px; margin:0 auto;
+    }
+    h1 {
+      margin-top:0; margin-bottom:1.5rem; font-weight:700; 
+      color:#444; text-align:center;
+    }
+    .btn {
+      width:100%; padding:.75rem; background:#6a85f1; color:#fff;
+      border:none; border-radius:8px; cursor:pointer; font-weight:600;
+      font-size:.9rem; margin-top:1rem; transition:background .2s;
+    }
+    .btn:hover { background:#5973d9; }
+    #goalsWrap > div {
+      background:#f9f9f9; border:1px solid #ddd; border-radius:10px;
+      padding:1rem; margin-bottom:1rem;
+    }
+    #goalsWrap h3 { margin:0 0 .5rem 0; font-size:1rem; color:#333; }
+    .progress {
+      height:10px; border-radius:6px; background:#eee; overflow:hidden;
+      margin-top:.5rem;
+    }
+    .progress span {
+      display:block; height:100%; background:#6a85f1;
+    }
+    .actions { margin-top:.5rem; }
+    .actions button {
+      margin-right:.5rem; padding:.3rem .6rem; font-size:.8rem;
+      border:none; border-radius:6px; cursor:pointer;
+    }
+    .actions .edit { background:#4dabf7; color:#fff; }
+    .actions .delete { background:#ff6b6b; color:#fff; }
+    .modal {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center;
+      visibility:hidden; opacity:0; transition:opacity .3s;
+    }
+    .modal.show { visibility:visible; opacity:1; }
+    .modal-content {
+      background:#fff; padding:2rem; border-radius:12px; width:100%; max-width:400px;
+      box-shadow:0 4px 16px rgba(0,0,0,.2);
+    }
+    .modal-content h2 { margin-top:0; text-align:center; }
+    .modal-content label { display:block; margin-top:1rem; font-size:.9rem; color:#444; }
+    .modal-content input {
+      width:100%; padding:.6rem; margin-top:.3rem; border:1px solid #ddd; border-radius:6px;
+    }
+    .modal-actions { margin-top:1.5rem; display:flex; gap:1rem; }
+    .modal-actions button { flex:1; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>FINCHECK</h2>
+    <a href="index.html">Dashboard</a>
+    <a href="transactions.html">Transactions</a>
+    <a href="budget.html">Budget</a>
+    <a href="goals.html" class="active">Goals</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="localStorage.removeItem('loggedInUser')">Log out</a>
+  </div>
+
+  <div class="main fadeIn">
+    <div class="card">
+      <h1>Saving Goals</h1>
+      <div id="goalsWrap"></div>
+      <button id="addGoalBtn" class="btn">+ Add Goal</button>
+    </div>
+  </div>
+
+  <!-- Modal for Goal -->
+  <div class="modal" id="goalModal">
+    <div class="modal-content">
+      <h2 id="modalTitle">Add Goal</h2>
+      <label>Goal Name <input type="text" id="goalName"></label>
+      <label>Target Amount (₹) <input type="number" id="goalTarget"></label>
+      <label>Saved So Far (₹) <input type="number" id="goalSaved"></label>
+      <div class="modal-actions">
+        <button class="btn" id="saveGoalBtn">Save</button>
+        <button class="btn" id="cancelGoalBtn" style="background:#ccc; color:#333;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const goalsWrap = document.getElementById("goalsWrap");
+    const addBtn = document.getElementById("addGoalBtn");
+    const modal = document.getElementById("goalModal");
+    const saveBtn = document.getElementById("saveGoalBtn");
+    const cancelBtn = document.getElementById("cancelGoalBtn");
+    const modalTitle = document.getElementById("modalTitle");
+
+    let goals = JSON.parse(localStorage.getItem("goals") || "[]");
+    const txns = JSON.parse(localStorage.getItem("txns") || "[]");
+    let editIndex = null;
+
+    function renderGoals() {
+      goalsWrap.innerHTML = "";
+      if (goals.length === 0) {
+        goalsWrap.innerHTML = `<p style="text-align:center; color:#777;">No goals yet. Add one!</p>`;
+        return;
+      }
+
+      goals.forEach((g, i) => {
+        // Calculate actual saved amount from transactions (if linked to goal name)
+        const txnSaved = txns
+          .filter(t => t.type === "income" && t.note && t.note.toLowerCase().includes(g.name.toLowerCase()))
+          .reduce((a,b) => a + b.amount, 0);
+
+        const totalSaved = g.saved + txnSaved;
+        const percent = Math.min((totalSaved / g.target) * 100, 100);
+
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <h3>${g.name} – ₹${totalSaved.toLocaleString("en-IN")} / ₹${g.target.toLocaleString("en-IN")}</h3>
+          <div class="progress"><span style="width:${percent}%; background:${percent>=100?"#20c997":"#6a85f1"}"></span></div>
+          <div class="actions">
+            <button class="edit" onclick="editGoal(${i})">Edit</button>
+            <button class="delete" onclick="deleteGoal(${i})">Delete</button>
+          </div>
+        `;
+        goalsWrap.appendChild(div);
+      });
+    }
+
+    function openModal(edit=false, index=null) {
+      modal.classList.add("show");
+      if (edit) {
+        modalTitle.textContent = "Edit Goal";
+        const g = goals[index];
+        document.getElementById("goalName").value = g.name;
+        document.getElementById("goalTarget").value = g.target;
+        document.getElementById("goalSaved").value = g.saved;
+        editIndex = index;
+      } else {
+        modalTitle.textContent = "Add Goal";
+        document.getElementById("goalName").value = "";
+        document.getElementById("goalTarget").value = "";
+        document.getElementById("goalSaved").value = "";
+        editIndex = null;
+      }
+    }
+
+    function closeModal() {
+      modal.classList.remove("show");
+    }
+
+    saveBtn.addEventListener("click", () => {
+      const name = document.getElementById("goalName").value.trim();
+      const target = parseFloat(document.getElementById("goalTarget").value) || 0;
+      const saved = parseFloat(document.getElementById("goalSaved").value) || 0;
+
+      if (!name || target <= 0) {
+        alert("Please enter valid goal details!");
+        return;
+      }
+
+      const goal = { name, target, saved };
+
+      if (editIndex !== null) {
+        goals[editIndex] = goal;
+      } else {
+        goals.push(goal);
+      }
+
+      localStorage.setItem("goals", JSON.stringify(goals));
+      renderGoals();
+      closeModal();
+    });
+
+    cancelBtn.addEventListener("click", closeModal);
+    addBtn.addEventListener("click", () => openModal());
+
+    window.editGoal = (i) => openModal(true, i);
+    window.deleteGoal = (i) => {
+      if (confirm("Delete this goal?")) {
+        goals.splice(i, 1);
+        localStorage.setItem("goals", JSON.stringify(goals));
+        renderGoals();
+      }
+    };
+
+    renderGoals();
+  </script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { margin:0; font-family: 'Inter', sans-serif; background:#f8f9fb; color:#333; }
+    .sidebar {
+      width:200px; background:#fff; height:100vh; position:fixed; top:0; left:0;
+      box-shadow:2px 0 6px rgba(0,0,0,0.05); padding:2rem 1rem;
+      display:flex; flex-direction:column; gap:1.5rem;
+    }
+    .sidebar h2 { font-size:1.2rem; color:#555; margin:0; }
+    .sidebar a { text-decoration:none; color:#555; font-weight:500; padding:.6rem 1rem; border-radius:8px; transition:all .2s; }
+    .sidebar a.active, .sidebar a:hover { background:#6a85f1; color:#fff; }
+    .main { margin-left:220px; padding:1.5rem; }
+    header { margin-bottom:1rem; }
+    header h2 { font-size:1.4rem; font-weight:700; color:#222; margin:0; }
+    header small { display:block; margin-top:.3rem; color:#555; font-weight:500; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-top:1.5rem; }
+    .card { border-radius:16px; padding:1.5rem; color:#fff; font-weight:600; position:relative; }
+    .card .value { font-size:1.6rem; margin:.5rem 0; }
+    .card button { position:absolute; top:10px; right:10px; background:#fff3; border:none; color:#fff; padding:.3rem .6rem; border-radius:6px; cursor:pointer; font-size:.8rem; }
+    .card.green { background:linear-gradient(135deg,#20c997,#48dbb3); }
+    .card.blue { background:linear-gradient(135deg,#4dabf7,#5c7cfa); }
+    .card.red { background:linear-gradient(135deg,#ff6b6b,#f06595); }
+    .card.purple { background:linear-gradient(135deg,#9b5de5,#c77dff); }
+    .charts { display:grid; grid-template-columns:2fr 1fr; gap:1.5rem; margin-top:2rem; }
+    .chart-card { background:#fff; border-radius:16px; padding:1rem; box-shadow:0 4px 16px rgba(0,0,0,.05); }
+    h3 { margin:0 0 .5rem; font-size:1rem; color:#444; }
+    .goals { margin-top:2rem; }
+    .goal { margin-bottom:1rem; }
+    .progress { height:8px; background:#eee; border-radius:4px; overflow:hidden; }
+    .progress span { display:block; height:100%; background:#6a85f1; }
+    .fadeIn { animation:fadeIn .8s ease forwards; opacity:0; }
+    @keyframes fadeIn { to{opacity:1; transform:none;} from{opacity:0; transform:translateY(10px);} }
+
+    /* Modal */
+    .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; visibility:hidden; opacity:0; transition:.3s; }
+    .modal.show { visibility:visible; opacity:1; }
+    .modal-content { background:#fff; padding:2rem; border-radius:12px; width:100%; max-width:400px; }
+    .modal-content h2 { margin-top:0; text-align:center; }
+    .modal-content label { display:block; margin-top:1rem; font-size:.9rem; color:#444; }
+    .modal-content input { width:100%; padding:.6rem; margin-top:.3rem; border:1px solid #ddd; border-radius:6px; }
+    .modal-actions { margin-top:1.5rem; display:flex; gap:1rem; }
+    .modal-actions button { flex:1; }
+  </style>
+</head>
+<body>
+  <script>
+    if(!localStorage.getItem("loggedInUser")) location.href="login.html";
+  </script>
+
+  <div class="sidebar">
+    <h2>FINCHECK</h2>
+    <a href="index.html" class="active">Dashboard</a>
+    <a href="transactions.html">Transactions</a>
+    <a href="budget.html">Budget</a>
+    <a href="goals.html">Goals</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="localStorage.removeItem('loggedInUser')">Log out</a>
+  </div>
+
+  <div class="main">
+    <header>
+      <h2>Welcome back, <span id="userName">User</span>!</h2>
+      <small>It’s a great day to track your finances.</small>
+    </header>
+
+    <div class="cards fadeIn">
+      <div class="card green">
+        <div>Total Balance</div>
+        <div class="value" id="balance">₹0</div>
+      </div>
+      <div class="card blue">
+        <div>Total Income</div>
+        <div class="value" id="income">₹0</div>
+      </div>
+      <div class="card red">
+        <div>Total Expenses</div>
+        <div class="value" id="expense">₹0</div>
+      </div>
+      <div class="card purple">
+        <div>Total Savings</div>
+        <div class="value" id="savings">₹0</div>
+        <button id="addSavingBtn">+ Add</button>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-card">
+        <h3>Total Income (Monthly)</h3>
+        <canvas id="lineChart" height="120"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Expenses by Category</h3>
+        <canvas id="donutChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card goals">
+      <h3>My Goals (Vision Board)</h3>
+      <div id="goalsWrap"></div>
+    </div>
+  </div>
+
+  <!-- Savings Modal -->
+  <div class="modal" id="savingModal">
+    <div class="modal-content">
+      <h2>Add Savings</h2>
+      <label>Date <input type="date" id="savingDate"></label>
+      <label>Amount <input type="number" id="savingAmount" placeholder="Enter amount"></label>
+      <label>Note <input type="text" id="savingNote" placeholder="Optional note"></label>
+      <div class="modal-actions">
+        <button class="btn" id="saveSavingBtn">Save</button>
+        <button class="btn" id="cancelSavingBtn" style="background:#ccc; color:#333;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === User Info ===
+    const user = JSON.parse(localStorage.getItem("loggedInUser"));
+    if(user) document.getElementById("userName").textContent=user.name;
+
+    // === Transactions ===
+    const txns = JSON.parse(localStorage.getItem("txns") || "[]");
+    const income = txns.filter(t => t.type === "income").reduce((a,b) => a + b.amount, 0);
+    const expense = txns.filter(t => t.type === "expense").reduce((a,b) => a + b.amount, 0);
+    const balance = income - expense;
+
+    document.getElementById("income").textContent = "₹" + income.toLocaleString("en-IN");
+    document.getElementById("expense").textContent = "₹" + expense.toLocaleString("en-IN");
+    document.getElementById("balance").textContent = "₹" + balance.toLocaleString("en-IN");
+
+    // === Savings (manual entry) ===
+    let savings = JSON.parse(localStorage.getItem("savings") || "[]");
+
+    function renderSavings() {
+      const totalSavings = savings.reduce((a,b)=>a+b.amount,0);
+      document.getElementById("savings").textContent = "₹" + totalSavings.toLocaleString("en-IN");
+    }
+    renderSavings();
+
+    // Modal controls
+    const savingModal = document.getElementById("savingModal");
+    document.getElementById("addSavingBtn").addEventListener("click", ()=> savingModal.classList.add("show"));
+    document.getElementById("cancelSavingBtn").addEventListener("click", ()=> savingModal.classList.remove("show"));
+
+    document.getElementById("saveSavingBtn").addEventListener("click", ()=>{
+      const amount = parseFloat(document.getElementById("savingAmount").value)||0;
+      const date = document.getElementById("savingDate").value;
+      const note = document.getElementById("savingNote").value;
+      if(!date || !amount){ alert("Please enter date and amount"); return; }
+      savings.push({date, amount, note});
+      localStorage.setItem("savings", JSON.stringify(savings));
+      renderSavings();
+      savingModal.classList.remove("show");
+    });
+
+    // === Charts ===
+    const monthlyIncome = {};
+    txns.filter(t => t.type === "income").forEach(t=>{
+      const month = new Date(t.date).toLocaleString("en-US",{month:"short"});
+      monthlyIncome[month] = (monthlyIncome[month]||0)+t.amount;
+    });
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const incomeData = months.map(m=>monthlyIncome[m]||0);
+
+    const categoryTotals = {};
+    txns.filter(t=>t.type==="expense").forEach(t=>{
+      categoryTotals[t.category]=(categoryTotals[t.category]||0)+t.amount;
+    });
+
+    new Chart(document.getElementById("lineChart"), {
+      type:"line",
+      data:{ labels:months, datasets:[{ label:"Income", data:incomeData, fill:false, borderColor:"#6a85f1", tension:.3 }] },
+      options:{responsive:true,plugins:{legend:{display:false}}}
+    });
+
+    new Chart(document.getElementById("donutChart"), {
+      type:"doughnut",
+      data:{ labels:Object.keys(categoryTotals), datasets:[{ data:Object.values(categoryTotals), backgroundColor:["#4dabf7","#ff6b6b","#20c997","#9775fa","#ffa94d","#f06595","#51cf66","#845ef7","#fcc419"] }] },
+      options:{responsive:true,plugins:{legend:{position:"bottom"}}}
+    });
+
+    // === Goals Vision Board ===
+    const goals = JSON.parse(localStorage.getItem("goals")||"[]");
+    const goalsWrap = document.getElementById("goalsWrap");
+    function renderGoals(){
+      goalsWrap.innerHTML="";
+      if(goals.length===0){
+        goalsWrap.innerHTML=`<p style="text-align:center; color:#777;">No goals yet. Add one in Goals page.</p>`;
+        return;
+      }
+      goals.forEach(g=>{
+        const percent=Math.min(((g.saved/g.target)*100),100);
+        const div=document.createElement("div");
+        div.className="goal";
+        div.innerHTML=`<div>${g.name} <span style="float:right">₹${g.saved.toLocaleString("en-IN")} / ₹${g.target.toLocaleString("en-IN")}</span></div>
+        <div class="progress"><span style="width:${percent}%; background:${percent>=100?"#20c997":"#6a85f1"}"></span></div>`;
+        goalsWrap.appendChild(div);
+      });
+    }
+    renderGoals();
+  </script>
+</body>
+</html>

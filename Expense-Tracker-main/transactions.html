@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transactions</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { margin:0; font-family: 'Inter', sans-serif; background:#f8f9fb; color:#333; }
+    .sidebar {
+      width:200px; background:#fff; height:100vh; position:fixed; top:0; left:0;
+      box-shadow:2px 0 6px rgba(0,0,0,0.05); padding:2rem 1rem;
+      display:flex; flex-direction:column; gap:1.5rem;
+    }
+    .sidebar h2 { font-size:1.2rem; color:#555; margin:0; }
+    .sidebar a { text-decoration:none; color:#555; font-weight:500; padding:.6rem 1rem;
+      border-radius:8px; transition:all .2s; }
+    .sidebar a.active, .sidebar a:hover { background:#6a85f1; color:#fff; }
+    .main { margin-left:220px; padding:1.5rem; }
+    .card {
+      background:#fff; padding:1.5rem; border-radius:16px;
+      box-shadow:0 4px 16px rgba(0,0,0,.05);
+      width:100%; max-width:1000px; margin:0 auto;
+    }
+    h1 { margin:0 0 1rem; font-weight:700; color:#444; text-align:center; }
+    .btn {
+      display:inline-block; padding:.6rem 1rem; background:#6a85f1;
+      color:#fff; border:none; border-radius:8px; cursor:pointer;
+      font-weight:600; font-size:.9rem; margin:.5rem 0;
+      text-align:center; transition:background .2s;
+    }
+    .btn:hover { background:#5973d9; }
+    table { width:100%; border-collapse:collapse; margin-top:1rem; font-size:.9rem; }
+    th, td { padding:.75rem; text-align:left; border-bottom:1px solid #eee; }
+    th { background:#f5f5f5; font-weight:600; }
+    tr:nth-child(even) { background:#fafafa; }
+    .actions { position:relative; }
+    .dropdown {
+      position:absolute; right:0; top:100%; background:#fff; border:1px solid #ddd;
+      border-radius:6px; display:none; flex-direction:column; min-width:100px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1); z-index:10;
+    }
+    .dropdown button {
+      background:none; border:none; padding:.5rem 1rem; text-align:left; cursor:pointer;
+      font-size:.85rem; transition:background .2s;
+    }
+    .dropdown button:hover { background:#f5f5f5; }
+    .menu-btn { background:none; border:none; font-size:1.2rem; cursor:pointer; }
+    .modal {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center;
+      visibility:hidden; opacity:0; transition:opacity .3s;
+    }
+    .modal.show { visibility:visible; opacity:1; }
+    .modal-content {
+      background:#fff; padding:2rem; border-radius:12px; width:100%; max-width:400px;
+      box-shadow:0 4px 16px rgba(0,0,0,0.2);
+    }
+    .modal-content h2 { margin-top:0; text-align:center; }
+    .modal-content label { display:block; margin-top:1rem; font-size:.9rem; color:#444; }
+    .modal-content input, .modal-content select {
+      width:100%; padding:.6rem; margin-top:.3rem; border:1px solid #ddd; border-radius:6px;
+    }
+    .modal-actions { margin-top:1.5rem; display:flex; gap:1rem; }
+    .modal-actions button { flex:1; }
+    .filter-box { margin:1rem 0; display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+    .filter-box label { font-size:.85rem; color:#444; }
+    .filter-box input { padding:.4rem .6rem; border:1px solid #ddd; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>FINCHECK</h2>
+    <a href="index.html">Dashboard</a>
+    <a href="transactions.html" class="active">Transactions</a>
+    <a href="budget.html">Budget</a>
+    <a href="goals.html">Goals</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="localStorage.removeItem('loggedInUser')">Log out</a>
+  </div>
+
+  <div class="main fadeIn">
+    <div class="card">
+      <h1>Transactions</h1>
+      <button id="addTxnBtn" class="btn">+ Add Transaction</button>
+      <div class="filter-box">
+        <label>From: <input type="date" id="fromDate"></label>
+        <label>To: <input type="date" id="toDate"></label>
+        <button id="downloadPdfBtn" class="btn">Download PDF</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Account</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="txnTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="txnModal">
+    <div class="modal-content">
+      <h2 id="modalTitle">Add Transaction</h2>
+      <label>Date <input type="date" id="txnDate"></label>
+      <label>Type 
+        <select id="txnType">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </label>
+      <label>Amount <input type="number" id="txnAmount" placeholder="Enter amount"></label>
+      <label>Account 
+        <select id="txnAccount">
+          <option value="PhonePe">PhonePe</option>
+          <option value="GPay">GPay</option>
+          <option value="Cash">Cash</option>
+        </select>
+      </label>
+      <label id="categoryLabel">Category 
+        <select id="txnCategory">
+          <option value="Food">Food</option>
+          <option value="Shopping">Shopping</option>
+          <option value="Travel">Travel</option>
+          <option value="Movies">Movies</option>
+          <option value="Rent">Rent</option>
+          <option value="Bills & Utilities">Bills & Utilities</option>
+          <option value="Groceries">Groceries</option>
+          <option value="Education">Education</option>
+          <option value="Healthcare">Healthcare</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Subscriptions">Subscriptions</option>
+          <option value="Fuel">Fuel</option>
+          <option value="Investments">Investments</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+      <label>Note <input type="text" id="txnNote" placeholder="Optional note"></label>
+      <div class="modal-actions">
+        <button class="btn" id="saveTxnBtn">Save</button>
+        <button class="btn" id="cancelTxnBtn" style="background:#ccc; color:#333;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const addBtn = document.getElementById("addTxnBtn");
+    const modal = document.getElementById("txnModal");
+    const cancelBtn = document.getElementById("cancelTxnBtn");
+    const saveBtn = document.getElementById("saveTxnBtn");
+    const tbody = document.getElementById("txnTbody");
+    const modalTitle = document.getElementById("modalTitle");
+    const downloadBtn = document.getElementById("downloadPdfBtn");
+    const txnTypeField = document.getElementById("txnType");
+    const categoryLabel = document.getElementById("categoryLabel");
+
+    let transactions = JSON.parse(localStorage.getItem("txns") || "[]");
+    let editIndex = null;
+
+    // Toggle Category
+    txnTypeField.addEventListener("change", () => {
+      categoryLabel.style.display = txnTypeField.value === "income" ? "none" : "block";
+    });
+
+    function renderTable() {
+      tbody.innerHTML = "";
+      if (transactions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#777;">No transactions yet</td></tr>`;
+        return;
+      }
+      transactions.forEach((txn, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${txn.date}</td>
+          <td>${txn.type}</td>
+          <td>₹${txn.amount.toLocaleString("en-IN")}</td>
+          <td>${txn.account}</td>
+          <td>${txn.type === "income" ? "-" : txn.category}</td>
+          <td>${txn.note || "-"}</td>
+          <td class="actions">
+            <button class="menu-btn">⋮</button>
+            <div class="dropdown">
+              <button onclick="editTxn(${index})">Edit</button>
+              <button onclick="deleteTxn(${index})">Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        const menuBtn = tr.querySelector(".menu-btn");
+        const dropdown = tr.querySelector(".dropdown");
+        menuBtn.addEventListener("click", () => {
+          dropdown.style.display = dropdown.style.display === "flex" ? "none" : "flex";
+          dropdown.style.flexDirection = "column";
+        });
+      });
+    }
+
+    function openModal(edit=false, index=null) {
+      modal.classList.add("show");
+      if (edit) {
+        modalTitle.textContent = "Edit Transaction";
+        const txn = transactions[index];
+        document.getElementById("txnDate").value = txn.date;
+        document.getElementById("txnType").value = txn.type;
+        document.getElementById("txnAmount").value = txn.amount;
+        document.getElementById("txnAccount").value = txn.account;
+        if (txn.type === "income") {
+          categoryLabel.style.display = "none";
+        } else {
+          categoryLabel.style.display = "block";
+          document.getElementById("txnCategory").value = txn.category;
+        }
+        document.getElementById("txnNote").value = txn.note;
+        editIndex = index;
+      } else {
+        modalTitle.textContent = "Add Transaction";
+        document.querySelectorAll(".modal-content input").forEach(i => i.value = "");
+        document.getElementById("txnType").value = "income";
+        document.getElementById("txnAccount").value = "PhonePe";
+        categoryLabel.style.display = "none";
+        editIndex = null;
+      }
+    }
+
+    window.editTxn = (index) => openModal(true, index);
+    window.deleteTxn = (index) => {
+      if (confirm("Delete this transaction?")) {
+        transactions.splice(index, 1);
+        localStorage.setItem("txns", JSON.stringify(transactions));
+        renderTable();
+      }
+    };
+
+    addBtn.addEventListener("click", () => openModal());
+    cancelBtn.addEventListener("click", () => modal.classList.remove("show"));
+
+    saveBtn.addEventListener("click", () => {
+      const txn = {
+        date: document.getElementById("txnDate").value,
+        type: document.getElementById("txnType").value,
+        amount: parseFloat(document.getElementById("txnAmount").value) || 0,
+        account: document.getElementById("txnAccount").value,
+        category: document.getElementById("txnType").value === "income" ? "" : document.getElementById("txnCategory").value,
+        note: document.getElementById("txnNote").value
+      };
+      if (!txn.date || !txn.amount || !txn.account) {
+        alert("Please fill all required fields!");
+        return;
+      }
+      if (editIndex !== null) {
+        transactions[editIndex] = txn;
+      } else {
+        transactions.push(txn);
+      }
+      localStorage.setItem("txns", JSON.stringify(transactions));
+      renderTable();
+      modal.classList.remove("show");
+    });
+
+    // PDF Download
+    downloadBtn.addEventListener("click", () => {
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      let filtered = transactions;
+
+      if (from && to) {
+        filtered = transactions.filter(txn => txn.date >= from && txn.date <= to);
+      }
+      if (filtered.length === 0) {
+        alert("No transactions found in this range!");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("FINCHECK – Account Statement", 14, 20);
+      doc.setFontSize(11);
+      doc.text(`Period: ${from || "All"} to ${to || "All"}`, 14, 28);
+      doc.text(`Generated: ${new Date().toISOString().split("T")[0]}`, 14, 34);
+
+      let totalIncome=0, totalExpense=0;
+      const rows = filtered.map(txn => {
+        if(txn.type==="income") totalIncome+=txn.amount;
+        if(txn.type==="expense") totalExpense+=txn.amount;
+        return [
+          txn.date,
+          txn.type==="income"?"Credit":"Debit",
+          txn.account,
+          txn.type==="income"?"-":txn.category,
+          txn.note||"-",
+          txn.type==="expense"?txn.amount.toLocaleString("en-IN"):"",
+          txn.type==="income"?txn.amount.toLocaleString("en-IN"):""
+        ];
+      });
+      const balance = totalIncome-totalExpense;
+
+      doc.autoTable({
+        startY: 40,
+        head:[["Date","Type","Account","Category","Note","Debit (₹)","Credit (₹)"]],
+        body:rows,
+        theme:"grid",
+        headStyles:{fillColor:[51,102,204], textColor:255, halign:"center"},
+        columnStyles:{5:{halign:"right"},6:{halign:"right"}},
+        styles:{fontSize:10}
+      });
+
+      let y = doc.lastAutoTable.finalY+10;
+      doc.text(`Total Income: ₹${totalIncome.toLocaleString("en-IN")}`,14,y);
+      doc.text(`Total Expense: ₹${totalExpense.toLocaleString("en-IN")}`,14,y+6);
+      doc.text(`Closing Balance: ₹${balance.toLocaleString("en-IN")}`,14,y+12);
+
+      doc.save("fincheck_statement.pdf");
+    });
+
+    renderTable();
+  </script>
+</body>
+</html>

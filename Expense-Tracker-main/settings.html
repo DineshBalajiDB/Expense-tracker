@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Settings</title>
+  <style>
+    body {
+      margin:0; font-family:'Inter', sans-serif; background:#f8f9fb; color:#333;
+    }
+    .sidebar {
+      width: 200px; background:#fff; height:100vh; position:fixed; top:0; left:0; 
+      box-shadow:2px 0 6px rgba(0,0,0,0.05); padding:2rem 1rem; 
+      display:flex; flex-direction:column; gap:1.5rem; align-items:center;
+    }
+    .sidebar h2 { font-size:1.2rem; color:#555; margin:0; }
+    .sidebar img {
+      width:60px; height:60px; border-radius:50%; margin-bottom:1rem; object-fit:cover; border:2px solid #6a85f1;
+    }
+    .sidebar a {
+      text-decoration:none; color:#555; font-weight:500; 
+      padding:.6rem 1rem; border-radius:8px; transition:all .2s; width:100%; text-align:center;
+    }
+    .sidebar a.active, .sidebar a:hover { background:#6a85f1; color:#fff; }
+    .main { margin-left:220px; padding:1.5rem; }
+    .card {
+      background:#fff; padding:2rem; border-radius:16px; 
+      box-shadow:0 4px 16px rgba(0,0,0,.05);
+      width:100%; max-width:500px; margin:0 auto;
+    }
+    h1 {
+      margin-top:0; margin-bottom:1.5rem; font-weight:700; 
+      color:#444; text-align:center;
+    }
+    .form-group {
+      margin-bottom:1rem;
+      text-align:left;
+    }
+    label {
+      display:block;
+      font-weight:600;
+      margin-bottom:.5rem;
+      color:#333;
+    }
+    input, select {
+      width:100%;
+      padding:.6rem;
+      border:1px solid #ddd;
+      border-radius:8px;
+      font-size:.9rem;
+    }
+    .btn {
+      width:100%; padding:.75rem; background:#6a85f1; color:#fff;
+      border:none; border-radius:8px; cursor:pointer; font-weight:600;
+      font-size:.9rem; margin-top:1rem; transition:background .2s;
+    }
+    .btn:hover { background:#5973d9; }
+    .fadeIn { animation:fadeIn .8s ease forwards; opacity:0; }
+    @keyframes fadeIn { to{opacity:1; transform:none;} from{opacity:0; transform:translateY(10px);} }
+
+    /* Theme styles */
+    body.light { background:#f8f9fb; color:#333; }
+    body.dark { background:#1e1e1e; color:#eee; }
+    body.dark .card, body.dark .sidebar { background:#2a2a2a; color:#eee; }
+    body.dark .sidebar a { color:#ccc; }
+    body.dark .sidebar a.active, body.dark .sidebar a:hover { background:#6a85f1; color:#fff; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <img id="profilePic" src="https://via.placeholder.com/60" alt="Profile">
+    <h2 id="profileName">FINCHECK</h2>
+    <a href="index.html">Dashboard</a>
+    <a href="transactions.html">Transactions</a>
+    <a href="budget.html">Budget</a>
+    <a href="goals.html">Goals</a>
+    <a href="settings.html" class="active">Settings</a>
+    <a href="login.html" onclick="localStorage.removeItem('loggedInUser')">Log out</a>
+  </div>
+
+  <div class="main fadeIn">
+    <div class="card">
+      <h1>Settings</h1>
+      <div class="form-group">
+        <label for="username">Change Username</label>
+        <input type="text" id="username" placeholder="Enter new name">
+      </div>
+
+      <div class="form-group">
+        <label for="profileImage">Change Profile Picture</label>
+        <input type="file" id="profileImage" accept="image/*">
+      </div>
+
+      <div class="form-group">
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <button id="saveBtn" class="btn">Save Settings</button>
+      <button id="clearDataBtn" class="btn" style="background:#ff6b6b; margin-top:10px;">Clear All Data</button>
+    </div>
+  </div>
+
+  <script>
+    // Load existing user settings
+    const user = JSON.parse(localStorage.getItem("loggedInUser")) || { name:"User", picture:"", theme:"light" };
+
+    document.getElementById("profileName").textContent = user.name;
+    if(user.picture) document.getElementById("profilePic").src = user.picture;
+    document.getElementById("username").value = user.name;
+    document.getElementById("theme").value = user.theme || "light";
+    document.body.classList.add(user.theme || "light");
+
+    // Handle profile picture change
+    document.getElementById("profileImage").addEventListener("change", function(){
+      const file = this.files[0];
+      if(file){
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById("profilePic").src = e.target.result;
+          user.picture = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Save settings
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      user.name = document.getElementById("username").value || "User";
+      user.theme = document.getElementById("theme").value;
+
+      // Save to localStorage
+      localStorage.setItem("loggedInUser", JSON.stringify(user));
+
+      // Apply changes instantly
+      document.getElementById("profileName").textContent = user.name;
+      document.body.className = "";
+      document.body.classList.add(user.theme);
+
+      alert("Settings saved!");
+    });
+
+    // Clear all data
+    document.getElementById("clearDataBtn").addEventListener("click", () => {
+      if(confirm("Are you sure you want to clear all app data?")){
+        localStorage.clear();
+        location.reload();
+      }
+    });
+  </script>
+</body>
+</html>
