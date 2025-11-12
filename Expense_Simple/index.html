@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Income & Expense Tracker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -87,13 +88,186 @@
             color: #ef4444;
         }
 
+        .savings-card .amount {
+            color: #f59e0b;
+        }
+
         .form-section,
-        .transactions-section {
+        .transactions-section,
+        .charts-section,
+        .goals-section {
             background: white;
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .charts-section h2,
+        .goals-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .goals-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+        }
+
+        .goals-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .goal-item {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s ease;
+        }
+
+        .goal-item:hover {
+            transform: translateX(5px);
+        }
+
+        .goal-item.achieved {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .goal-item.overdue {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .goal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .goal-amount {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .goal-progress {
+            margin: 15px 0;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 25px;
+            background: #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .progress-bar.achieved {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .goal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-edit {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #5568d3;
+        }
+
+        .btn-delete-goal {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-delete-goal:hover {
+            background: #dc2626;
+        }
+
+        .btn-achieved {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-achieved:hover {
+            background: #059669;
+        }
+
+        .goal-days {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-top: 5px;
+        }
+
+        .goal-days.overdue {
+            color: #ef4444;
+            font-weight: 600;
         }
 
         .form-section h2,
@@ -354,6 +528,27 @@
                 width: 100%;
                 margin-top: 10px;
             }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-wrapper {
+                height: 250px;
+            }
+
+            .goals-form {
+                grid-template-columns: 1fr;
+            }
+
+            .goal-actions {
+                flex-wrap: wrap;
+            }
+
+            .btn-small {
+                flex: 1;
+                min-width: 100px;
+            }
         }
     </style>
 </head>
@@ -376,6 +571,44 @@
             <div class="card expense-card">
                 <h3>Total Expenses</h3>
                 <p class="amount" id="totalExpense">₹0.00</p>
+            </div>
+            <div class="card savings-card">
+                <h3>Total Savings</h3>
+                <p class="amount" id="totalSavings">₹0.00</p>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <h2>Financial Overview</h2>
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <canvas id="overviewChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="goals-section">
+            <h2>Savings Goals</h2>
+            <form id="goalForm" class="goals-form">
+                <div class="form-group">
+                    <label for="goalName">Goal Name</label>
+                    <input type="text" id="goalName" placeholder="e.g., Emergency Fund" required>
+                </div>
+                <div class="form-group">
+                    <label for="goalTarget">Target Amount (₹)</label>
+                    <input type="number" id="goalTarget" step="0.01" min="0" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="goalDate">Target Date (Optional)</label>
+                    <input type="date" id="goalDate">
+                </div>
+                <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">Add Goal</button>
+            </form>
+            <div class="goals-list" id="goalsList">
+                <p class="empty-state">No goals yet. Add your first savings goal above!</p>
             </div>
         </div>
 
@@ -439,6 +672,10 @@
 
         // Initialize transactions array
         let transactions = [];
+        let goals = [];
+        let overviewChart = null;
+        let expenseChart = null;
+        let editingGoalId = null;
 
         // Load transactions from localStorage
         function loadTransactions() {
@@ -453,6 +690,19 @@
             localStorage.setItem('transactions', JSON.stringify(transactions));
         }
 
+        // Load goals from localStorage
+        function loadGoals() {
+            const stored = localStorage.getItem('goals');
+            if (stored) {
+                goals = JSON.parse(stored);
+            }
+        }
+
+        // Save goals to localStorage
+        function saveGoals() {
+            localStorage.setItem('goals', JSON.stringify(goals));
+        }
+
         // Format amount in INR
         function formatINR(amount) {
             return new Intl.NumberFormat('en-IN', {
@@ -460,6 +710,13 @@
                 currency: 'INR',
                 minimumFractionDigits: 2
             }).format(amount);
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Update category dropdown based on type
@@ -501,10 +758,12 @@
                 .reduce((sum, t) => sum + parseFloat(t.amount), 0);
             
             const balance = totalIncome - totalExpense;
+            const totalSavings = balance > 0 ? balance : 0;
             
             document.getElementById('totalIncome').textContent = formatINR(totalIncome);
             document.getElementById('totalExpense').textContent = formatINR(totalExpense);
             document.getElementById('balance').textContent = formatINR(balance);
+            document.getElementById('totalSavings').textContent = formatINR(totalSavings);
             
             // Update balance color based on positive/negative
             const balanceElement = document.getElementById('balance');
@@ -512,6 +771,396 @@
                 balanceElement.style.color = '#10b981';
             } else {
                 balanceElement.style.color = '#ef4444';
+            }
+            
+            // Update charts
+            updateCharts(totalIncome, totalSavings, totalExpense);
+            
+            // Update goals display
+            displayGoals();
+        }
+
+        // Update charts
+        function updateCharts(totalIncome, totalSavings, totalExpense) {
+            // Overview Chart (Savings and Expenses as breakdown of Income)
+            const overviewCtx = document.getElementById('overviewChart').getContext('2d');
+            
+            if (overviewChart) {
+                overviewChart.destroy();
+            }
+            
+            // Only show chart if there's income
+            if (totalIncome > 0) {
+                const chartData = [];
+                const chartLabels = [];
+                const chartColors = [];
+                
+                if (totalSavings > 0) {
+                    chartData.push(totalSavings);
+                    chartLabels.push('Savings');
+                    chartColors.push('#f59e0b');
+                }
+                
+                if (totalExpense > 0) {
+                    chartData.push(totalExpense);
+                    chartLabels.push('Expenses');
+                    chartColors.push('#ef4444');
+                }
+                
+                // If no savings or expenses, show placeholder
+                if (chartData.length === 0) {
+                    chartData.push(totalIncome);
+                    chartLabels.push('Income');
+                    chartColors.push('#10b981');
+                }
+                
+                overviewChart = new Chart(overviewCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Total Income: ${formatINR(totalIncome)}`,
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = formatINR(context.parsed);
+                                        const percentage = totalIncome > 0 ? ((context.parsed / totalIncome) * 100).toFixed(1) : 0;
+                                        return `${label}: ${value} (${percentage}% of income)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Empty state
+                overviewChart = new Chart(overviewCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['No Data'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#e5e7eb'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: false
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Expense Chart (by category)
+            const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+            const expenseTransactions = transactions.filter(t => t.type === 'expense');
+            const expenseByCategory = {};
+            
+            expenseTransactions.forEach(t => {
+                if (expenseByCategory[t.category]) {
+                    expenseByCategory[t.category] += parseFloat(t.amount);
+                } else {
+                    expenseByCategory[t.category] = parseFloat(t.amount);
+                }
+            });
+            
+            const expenseLabels = Object.keys(expenseByCategory);
+            const expenseData = Object.values(expenseByCategory);
+            
+            const expenseColors = [
+                '#ef4444', '#f97316', '#f59e0b', '#eab308',
+                '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+                '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6',
+                '#a855f7', '#d946ef', '#ec4899', '#f43f5e'
+            ];
+            
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
+            
+            if (expenseLabels.length > 0) {
+                expenseChart = new Chart(expenseCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: expenseLabels,
+                        datasets: [{
+                            data: expenseData,
+                            backgroundColor: expenseColors.slice(0, expenseLabels.length),
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Expenses by Category',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 10,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = formatINR(context.parsed);
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Show empty state
+                expenseChart = new Chart(expenseCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['No Expenses'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#e5e7eb'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Display goals
+        function displayGoals() {
+            const goalsList = document.getElementById('goalsList');
+            const totalSavings = calculateTotalSavings();
+            
+            if (goals.length === 0) {
+                goalsList.innerHTML = '<p class="empty-state">No goals yet. Add your first savings goal above!</p>';
+                return;
+            }
+            
+            goalsList.innerHTML = goals.map(goal => {
+                const progress = Math.min((totalSavings / goal.target) * 100, 100);
+                const isAchieved = goal.achieved || progress >= 100;
+                const remaining = goal.target - totalSavings;
+                const daysRemaining = goal.targetDate ? calculateDaysRemaining(goal.targetDate) : null;
+                const isOverdue = daysRemaining !== null && daysRemaining < 0 && !isAchieved;
+                
+                let statusClass = '';
+                if (isAchieved) {
+                    statusClass = 'achieved';
+                } else if (isOverdue) {
+                    statusClass = 'overdue';
+                }
+                
+                const progressPercent = progress.toFixed(1);
+                const savedAmount = formatINR(totalSavings > goal.target ? goal.target : totalSavings);
+                const remainingAmount = formatINR(remaining > 0 ? remaining : 0);
+                const goalName = escapeHtml(goal.name);
+                
+                let daysHtml = '';
+                if (daysRemaining !== null) {
+                    const daysClass = isOverdue ? 'overdue' : '';
+                    const daysText = isOverdue ? `Overdue by ${Math.abs(daysRemaining)} days` : `${daysRemaining} days remaining`;
+                    daysHtml = `<div class="goal-days ${daysClass}">${daysText}</div>`;
+                }
+                
+                let actionsHtml = '';
+                if (!isAchieved) {
+                    actionsHtml = `
+                        <button class="btn-small btn-achieved" onclick="markGoalAchieved(${goal.id})">Mark Achieved</button>
+                        <button class="btn-small btn-edit" onclick="editGoal(${goal.id})">Edit</button>
+                    `;
+                }
+                actionsHtml += `<button class="btn-small btn-delete-goal" onclick="deleteGoal(${goal.id})">Delete</button>`;
+                
+                return `
+                    <div class="goal-item ${statusClass}">
+                        <div class="goal-header">
+                            <div>
+                                <div class="goal-title">${goalName}</div>
+                                <div class="goal-amount">Target: ${formatINR(goal.target)}</div>
+                            </div>
+                        </div>
+                        <div class="goal-progress">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar ${isAchieved ? 'achieved' : ''}" style="width: ${progressPercent}%">
+                                    ${progressPercent}%
+                                </div>
+                            </div>
+                            <div class="progress-info">
+                                <span>Saved: ${savedAmount}</span>
+                                <span>Remaining: ${remainingAmount}</span>
+                            </div>
+                            ${daysHtml}
+                        </div>
+                        <div class="goal-actions">
+                            ${actionsHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Calculate total savings
+        function calculateTotalSavings() {
+            const totalIncome = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            
+            const totalExpense = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            
+            const balance = totalIncome - totalExpense;
+            return balance > 0 ? balance : 0;
+        }
+
+        // Calculate days remaining
+        function calculateDaysRemaining(targetDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const target = new Date(targetDate);
+            target.setHours(0, 0, 0, 0);
+            const diffTime = target - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        // Add goal
+        function addGoal(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('goalName').value;
+            const target = parseFloat(document.getElementById('goalTarget').value);
+            const targetDate = document.getElementById('goalDate').value || null;
+            
+            if (!name || target <= 0) {
+                alert('Please fill in all required fields with valid values.');
+                return;
+            }
+            
+            if (editingGoalId !== null) {
+                // Edit existing goal
+                const goalIndex = goals.findIndex(g => g.id === editingGoalId);
+                if (goalIndex !== -1) {
+                    goals[goalIndex] = {
+                        ...goals[goalIndex],
+                        name: name,
+                        target: target,
+                        targetDate: targetDate
+                    };
+                }
+                editingGoalId = null;
+            } else {
+                // Add new goal
+                const goal = {
+                    id: Date.now(),
+                    name: name,
+                    target: target,
+                    targetDate: targetDate,
+                    achieved: false
+                };
+                goals.push(goal);
+            }
+            
+            saveGoals();
+            
+            // Reset form
+            document.getElementById('goalForm').reset();
+            document.querySelector('#goalForm button[type="submit"]').textContent = 'Add Goal';
+            
+            displayGoals();
+        }
+
+        // Edit goal
+        function editGoal(id) {
+            const goal = goals.find(g => g.id === id);
+            if (goal) {
+                document.getElementById('goalName').value = goal.name;
+                document.getElementById('goalTarget').value = goal.target;
+                document.getElementById('goalDate').value = goal.targetDate || '';
+                editingGoalId = id;
+                document.querySelector('#goalForm button[type="submit"]').textContent = 'Update Goal';
+                document.getElementById('goalForm').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Delete goal
+        function deleteGoal(id) {
+            if (confirm('Are you sure you want to delete this goal?')) {
+                goals = goals.filter(g => g.id !== id);
+                saveGoals();
+                displayGoals();
+            }
+        }
+
+        // Mark goal as achieved
+        function markGoalAchieved(id) {
+            const goalIndex = goals.findIndex(g => g.id === id);
+            if (goalIndex !== -1) {
+                goals[goalIndex].achieved = true;
+                saveGoals();
+                displayGoals();
             }
         }
 
@@ -630,11 +1279,13 @@
                 .reduce((sum, t) => sum + parseFloat(t.amount), 0);
             
             const balance = totalIncome - totalExpense;
+            const totalSavings = balance > 0 ? balance : 0;
             
             // Set up colors
             const primaryColor = [102, 126, 234];
             const incomeColor = [16, 185, 129];
             const expenseColor = [239, 68, 68];
+            const savingsColor = [245, 158, 11];
             const textColor = [51, 51, 51];
             const lightGray = [243, 244, 246];
             
@@ -660,36 +1311,44 @@
             doc.text('Summary', 14, yPos);
             yPos += 10;
             
-            // Summary boxes
-            const boxWidth = 58;
-            const boxHeight = 30;
+            // Summary boxes - 4 boxes in 2 rows
+            const boxWidth = 42;
+            const boxHeight = 25;
             const startX = 14;
             const spacing = 4;
             
+            // Row 1: Balance and Income
             // Balance box
             doc.setFillColor(...primaryColor);
             doc.roundedRect(startX, yPos, boxWidth, boxHeight, 3, 3, 'F');
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
+            doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
-            doc.text('BALANCE', startX + boxWidth/2, yPos + 8, { align: 'center' });
-            doc.setFontSize(14);
+            doc.text('BALANCE', startX + boxWidth/2, yPos + 7, { align: 'center' });
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            doc.text(formatINR(balance), startX + boxWidth/2, yPos + 20, { align: 'center' });
+            doc.text(formatINR(balance), startX + boxWidth/2, yPos + 18, { align: 'center' });
             
             // Income box
             doc.setFillColor(...incomeColor);
             doc.roundedRect(startX + boxWidth + spacing, yPos, boxWidth, boxHeight, 3, 3, 'F');
-            doc.text('TOTAL INCOME', startX + boxWidth + spacing + boxWidth/2, yPos + 8, { align: 'center' });
-            doc.setFontSize(14);
-            doc.text(formatINR(totalIncome), startX + boxWidth + spacing + boxWidth/2, yPos + 20, { align: 'center' });
+            doc.text('INCOME', startX + boxWidth + spacing + boxWidth/2, yPos + 7, { align: 'center' });
+            doc.setFontSize(11);
+            doc.text(formatINR(totalIncome), startX + boxWidth + spacing + boxWidth/2, yPos + 18, { align: 'center' });
             
             // Expense box
             doc.setFillColor(...expenseColor);
             doc.roundedRect(startX + (boxWidth + spacing) * 2, yPos, boxWidth, boxHeight, 3, 3, 'F');
-            doc.text('TOTAL EXPENSES', startX + (boxWidth + spacing) * 2 + boxWidth/2, yPos + 8, { align: 'center' });
-            doc.setFontSize(14);
-            doc.text(formatINR(totalExpense), startX + (boxWidth + spacing) * 2 + boxWidth/2, yPos + 20, { align: 'center' });
+            doc.text('EXPENSES', startX + (boxWidth + spacing) * 2 + boxWidth/2, yPos + 7, { align: 'center' });
+            doc.setFontSize(11);
+            doc.text(formatINR(totalExpense), startX + (boxWidth + spacing) * 2 + boxWidth/2, yPos + 18, { align: 'center' });
+            
+            // Savings box
+            doc.setFillColor(...savingsColor);
+            doc.roundedRect(startX + (boxWidth + spacing) * 3, yPos, boxWidth, boxHeight, 3, 3, 'F');
+            doc.text('SAVINGS', startX + (boxWidth + spacing) * 3 + boxWidth/2, yPos + 7, { align: 'center' });
+            doc.setFontSize(11);
+            doc.text(formatINR(totalSavings), startX + (boxWidth + spacing) * 3 + boxWidth/2, yPos + 18, { align: 'center' });
             
             yPos += boxHeight + 15;
             
@@ -839,17 +1498,24 @@
             // Load transactions
             loadTransactions();
             
+            // Load goals
+            loadGoals();
+            
             // Calculate and display totals
             calculateTotals();
             
             // Display transactions
             displayTransactions();
             
+            // Display goals
+            displayGoals();
+            
             // Event listeners
             document.getElementById('transactionForm').addEventListener('submit', addTransaction);
             document.getElementById('type').addEventListener('change', updateCategoryDropdown);
             document.getElementById('filterType').addEventListener('change', displayTransactions);
             document.getElementById('filterCategory').addEventListener('change', displayTransactions);
+            document.getElementById('goalForm').addEventListener('submit', addGoal);
         }
 
         // Initialize when DOM is loaded
